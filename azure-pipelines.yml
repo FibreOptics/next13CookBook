@@ -7,7 +7,7 @@ trigger:
 - main
 
 pool:
-  name: next13cookbookagent
+  name: 'next13cookbookagent'
   vmImage: ubuntu-latest
 
 steps:
