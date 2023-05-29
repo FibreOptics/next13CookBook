@@ -6,7 +6,7 @@
 trigger:
 - main
 
-pool:
+pool: Self-hosted29May
   vmImage: ubuntu-latest
 
 steps:
