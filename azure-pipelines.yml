@@ -1,57 +1,21 @@
-name: '$(SourceBranchName).$(Rev:rr)'
+pool:
+  name: Azure Pipelines
 
-trigger:
-  branches:
-    include:
-      - main
+steps:
+- script: 'npm install'
+  displayName: 'Install Dependencies'
 
-pr:
-  - main
+- script: |
+   npm run build
+  displayName: 'Build the project'
 
-variables:
-  ImageName: 'next13cookbookImg'
-  tag: $(Build.BuildNumber)
-
-stages:
-- stage: Build
-  displayName: Build Image
-
-  jobs:
-  - job: Build
-    displayName: Build
-    # how long to run the job before automatically cancelling
-    timeoutInMinutes: 30
-    # how much time to give 'run always even if cancelled tasks' before stopping them
-    cancelTimeoutInMinutes: 1 
-    
-    pool:
-      vmImage: ubuntu-latest
-    
-    steps:
-      - task: NodeTool@0
-        displayName: 'Install Node.js'
-        inputs:
-          versionSpec: '18.x'
-
-        # Build
-      - script: |
-          npm install
-          npm run build
-        displayName: 'npm install and build'
-
-      # Create artifact
-      - task: Docker@2
-        displayName: Create artifact
-        inputs:
-          command: 'save'
-          buildContext: '$(Build.SourcesDirectory)'
-          arguments: '--output $(Build.ArtifactStagingDirectory)/$(ImageName).image.tar next13cookbookacr/$(ImageName):$(tag)'
-
-      # Push artifact
-      - task: PublishBuildArtifacts@1
-        displayName: Save artifact
-        inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ImageName).image.tar'
-          ArtifactName: '$(ImageName).image.tar'
-          publishLocation: 'Container'
-
+- task: Docker@2
+  inputs:
+    command: 'build'
+    Dockerfile: '**/Dockerfile'
+  
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'next13cookbookdrop'
+    publishLocation: 'Container'
