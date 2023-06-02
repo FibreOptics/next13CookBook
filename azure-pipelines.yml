@@ -45,7 +45,7 @@ stages:
         inputs:
           command: 'save'
           buildContext: '$(Build.SourcesDirectory)'
-          arguments: '--output $(Build.ArtifactStagingDirectory)/$(ImageName).image.tar $(AcrRepositoryHostName)/$(ImageName):$(tag)'
+          arguments: '--output $(Build.ArtifactStagingDirectory)/$(ImageName).image.tar next13cookbookacr/$(ImageName):$(tag)'
 
       # Push artifact
       - task: PublishBuildArtifacts@1
