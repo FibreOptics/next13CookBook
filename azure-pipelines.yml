@@ -1,35 +1,80 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+name: '$(SourceBranchName).$(Rev:rr)'
 
 trigger:
-- main
+  branches:
+    include:
+      - main
 
-pool:
-  name: Default
+pr:
+  - main
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '18.x'
-  displayName: 'Install Node.js'
+variables:
+  ImageName: 'next13cookbookImg'
+  tag: $(Build.BuildNumber)
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+stages:
+- stage: Build
+  displayName: Build Image
 
-- task: ArchiveFiles@2
-  inputs:
-   rootFolderOrFile: '.'
-   includeRootFolder: false
-   archiveType: 'zip'
-   archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-   replaceExistingArchive: true
+  jobs:
+  - job: Build
+    displayName: Build
+    # how long to run the job before automatically cancelling
+    timeoutInMinutes: 30
+    # how much time to give 'run always even if cancelled tasks' before stopping them
+    cancelTimeoutInMinutes: 1 
+    
+    pool:
+      name: Default
+    
+    steps:
+      - task: NodeTool@0
+        displayName: 'Install Node.js'
+        inputs:
+          versionSpec: '18.x'
 
-- task: PublishBuildArtifacts@1
-  inputs:
-   PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-   ArtifactName: 'drop'
-   publishLocation: 'Container'
+        # Build
+      - script: |
+          npm run build
+        displayName: 'Npm build'
+
+      # ACR Login
+      - task: Docker@2
+        displayName: Registry Login
+        inputs:
+          containerRegistry: 'next13cookbookacr'
+          command: 'login'
+      - script: 'docker pull $(AcrRepositoryHostName)/$(ImageName):latest'
+        displayName: Pull latest for layer caching
+        continueOnError: true
+
+      # Build images
+      - task: Docker@2
+        displayName: Build an image
+        inputs:
+          containerRegistry: 'next13cookbookacr'
+          repository: '$(ImageName)'
+          command: 'build'
+          Dockerfile: '**/Dockerfile'
+          buildContext: '$(Build.SourcesDirectory)'
+          arguments: '--cache-from=$(AcrRepositoryHostName)/$(ImageName):latest'
+          tags: |
+            $(tag)
+            latest
+
+      # Create artifact
+      - task: Docker@2
+        displayName: Create artifact
+        inputs:
+          command: 'save'
+          buildContext: '$(Build.SourcesDirectory)'
+          arguments: '--output $(Build.ArtifactStagingDirectory)/$(ImageName).image.tar $(AcrRepositoryHostName)/$(ImageName):$(tag)'
+
+      # Push artifact
+      - task: PublishBuildArtifacts@1
+        displayName: Save artifact
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ImageName).image.tar'
+          ArtifactName: '$(ImageName).image.tar'
+          publishLocation: 'Container'
+
