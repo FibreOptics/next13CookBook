@@ -35,8 +35,9 @@ stages:
 
         # Build
       - script: |
+          npm install
           npm run build
-        displayName: 'Npm build'
+        displayName: 'npm install and build'
 
       # Create artifact
       - task: Docker@2
