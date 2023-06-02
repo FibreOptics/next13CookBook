@@ -38,30 +38,6 @@ stages:
           npm run build
         displayName: 'Npm build'
 
-      # ACR Login
-      - task: Docker@2
-        displayName: Registry Login
-        inputs:
-          containerRegistry: 'next13cookbookacr'
-          command: 'login'
-      - script: 'docker pull $(AcrRepositoryHostName)/$(ImageName):latest'
-        displayName: Pull latest for layer caching
-        continueOnError: true
-
-      # Build images
-      - task: Docker@2
-        displayName: Build an image
-        inputs:
-          containerRegistry: 'next13cookbookacr'
-          repository: '$(ImageName)'
-          command: 'build'
-          Dockerfile: '**/Dockerfile'
-          buildContext: '$(Build.SourcesDirectory)'
-          arguments: '--cache-from=$(AcrRepositoryHostName)/$(ImageName):latest'
-          tags: |
-            $(tag)
-            latest
-
       # Create artifact
       - task: Docker@2
         displayName: Create artifact
